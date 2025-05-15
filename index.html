@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-T5XSRNPN');</script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        .status-dot.success {
+            background-color: #2ecc71;
+        }
+        .status-dot.error {
+            background-color: #e74c3c;
+        }
+        .status-dot.warning {
+            background-color: #f39c12;
+        }
+        .weather-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .weather-icon {
+            font-size: 48px;
+            margin-right: 20px;
+        }
+        .temperature {
+            font-size: 36px;
+            font-weight: bold;
+        }
+        .details {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .detail-item {
+            display: flex;
+            align-items: center;
+        }
+        .detail-icon {
+            margin-right: 10px;
+            color: #7f8c8d;
+        }
+        .timestamp {
+            color: #95a5a6;
+            font-size: 0.8em;
+            margin-top: 15px;
+            text-align: right;
+        }
+        .log-container {
+            height: 200px;
+            overflow-y: auto;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .log-entry.success {
+            background-color: rgba(46, 204, 113, 0.2);
+        }
+        .log-entry.error {
+            background-color: rgba(231, 76, 60, 0.2);
+        }
+        .log-entry.warning {
+            background-color: rgba(243, 156, 18, 0.2);
+        }
+        .api-status-message {
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            text-align: center;
+        }
+        .api-status-message.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .api-status-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .api-status-message.warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .api-status-message.info {
+            background-color: #e2f0fb;
+            color: #0c5460;
+        }
+    </style>
+    </head>
+<body>
+    <!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-T5XSRNPN"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+    <div class="container">
+        <div class="card" id="weather-card">
+            <h2>
+                Weather Report
+                <span class="status-dot" id="weather-status"></span>
+            </h2>
+            <div class="weather-info">
+                <div class="weather-icon" id="weather-icon">⛅</div>
+                <div>
+                    <div class="temperature" id="temperature">--°C</div>
+                    <div id="weather-description">Loading weather data...</div>
+                </div>
+            </div>
+            <div class="details">
+                <div class="detail-item">
+                    <span class="detail-icon">💧</span>
+                    <span>Humidity: <span id="humidity">--%</span></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-icon">💨</span>
+                    <span>Wind: <span id="wind-speed">-- m/s</span></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-icon">🌡️</span>
+                    <span>Feels like: <span id="feels-like">--°C</span></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-icon">☁️</span>
+                    <span>Clouds: <span id="clouds">--%</span></span>
+                </div>
+            </div>
+            <div id="weather-last-update" class="timestamp">Last updated: Never</div>
+            <!-- Status message will be inserted here dynamically -->
+        </div>
+
+        <div class="card">
+            <h2>System Log</h2>
+            <div class="log-container" id="log-container">
+                <div class="log-entry">System initializing...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Utility functions
+        function formatTimestamp(date) {
+            return date.toLocaleTimeString() + '.' + date.getMilliseconds().toString().padStart(3, '0');
+        }
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function pushToDataLayer(eventName, eventData) {
+            window.dataLayer.push({
+                'event': eventName,
+                'eventData': eventData,
+                'timestamp': new Date().toISOString()
+            });
+            console.log('Data pushed to dataLayer:', eventName, eventData);
+        }
+
+        function addLogEntry(message, type = '') {
+            const logContainer = document.getElementById('log-container');
+            const now = new Date();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.innerHTML = `<span class="timestamp">${formatTimestamp(now)}</span> ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function updateLastUpdated() {
+            const now = new Date();
+            document.getElementById('weather-last-update').textContent = `Last updated: ${formatTimestamp(now)}`;
+        }
+
+        function setStatusDot(elementId, status) {
+            const dot = document.getElementById(elementId);
+            dot.className = 'status-dot ' + status;
+        }
+
+        function showStatusMessage(type, title, subtitle = '') {
+            // Create status message
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `api-status-message ${type}`;
+            messageDiv.innerHTML = `<strong>${title}</strong>${subtitle ? '<br><span style="font-size: 0.9em;">' + subtitle + '</span>' : ''}`;
+            
+            // Replace previous message if exists
+            const previousMessage = document.querySelector('.api-status-message');
+            if (previousMessage) {
+                document.getElementById('weather-card').replaceChild(messageDiv, previousMessage);
+            } else {
+                document.getElementById('weather-card').appendChild(messageDiv);
+            }
+            
+            return messageDiv;
+        }
+
+        // Weather module
+        const weatherIcons = {
+            'Clear': '☀️',
+            'Clouds': '☁️',
+            'Rain': '🌧️',
+            'Drizzle': '🌦️',
+            'Thunderstorm': '⛈️',
+            'Snow': '❄️',
+            'Mist': '🌫️',
+            'Fog': '🌫️',
+            'Haze': '🌫️',
+            'Dust': '💨',
+            'Smoke': '💨'
+        };
+
+        function getWeatherIcon(weatherCondition) {
+            return weatherIcons[weatherCondition] || '🌡️';
+        }
+
+        // List of possible API issues
+        const possibleIssues = [
+            "API connection timeout", 
+            "API rate limit exceeded", 
+            "Invalid API key", 
+            "Server returned 500 error",
+            "Network connectivity issue"
+        ];
+
+        function updateWeather() {
+            const now = new Date();
+            addLogEntry(`Attempting Weather API call at ${formatTimestamp(now)}`, 'success');
+            
+            // Simulate random failure (20% chance)
+            const shouldFail = Math.random() < 0.2;
+            
+            if (shouldFail) {
+                // Select a random issue
+                const randomIssue = possibleIssues[Math.floor(Math.random() * possibleIssues.length)];
+                
+                setStatusDot('weather-status', 'error');
+                addLogEntry(`Weather API request failed: ${randomIssue}`, 'error');
+                
+                // Show error message
+                showStatusMessage('error', '❌ API CALL FAILED', randomIssue);
+                
+                // Push to data layer
+                pushToDataLayer('weather_api_error', {
+                    error: 'Network error',
+                    issue: randomIssue,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // When API is down, don't recall after 1 min
+                // Instead, start polling status API every 1 min until resolved
+                addLogEntry(`Weather API is down. Starting status check in 2 minutes...`, 'error');
+                setStatusDot('weather-status', 'error');
+                
+                // Wait 2 minutes before starting to poll status API
+                setTimeout(checkWeatherApiStatus, 120000);
+                return;
+            }
+            
+            // Simulate successful API call
+            setStatusDot('weather-status', 'success');
+            
+            // Generate mock weather data
+            const cities = ['New York', 'London', 'Tokyo', 'Sydney', 'Paris'];
+            const conditions = ['Clear', 'Clouds', 'Rain', 'Drizzle'];
+            
+            const mockData = {
+                name: cities[getRandomInt(0, cities.length - 1)],
+                main: {
+                    temp: getRandomInt(5, 35),
+                    feels_like: getRandomInt(5, 35),
+                    humidity: getRandomInt(30, 90)
+                },
+                wind: {
+                    speed: (getRandomInt(1, 20) / 2).toFixed(1)
+                },
+                clouds: {
+                    all: getRandomInt(0, 100)
+                },
+                weather: [
+                    {
+                        main: conditions[getRandomInt(0, conditions.length - 1)]
+                    }
+                ]
+            };
+            
+            // Update UI
+            document.getElementById('temperature').textContent = `${mockData.main.temp}°C`;
+            document.getElementById('feels-like').textContent = `${mockData.main.feels_like}°C`;
+            document.getElementById('humidity').textContent = `${mockData.main.humidity}%`;
+            document.getElementById('wind-speed').textContent = `${mockData.wind.speed} m/s`;
+            document.getElementById('clouds').textContent = `${mockData.clouds.all}%`;
+            document.getElementById('weather-description').textContent = `${mockData.weather[0].main} in ${mockData.name}`;
+            document.getElementById('weather-icon').textContent = getWeatherIcon(mockData.weather[0].main);
+            
+            updateLastUpdated();
+            
+            // Show success message
+            showStatusMessage('success', '✅ API CALL SUCCESSFUL');
+            
+            addLogEntry(`Weather data retrieved for ${mockData.name}: ${mockData.weather[0].main}, ${mockData.main.temp}°C`, 'success');
+            
+            // Push to data layer
+            pushToDataLayer('weather_update', {
+                city: mockData.name,
+                temperature: mockData.main.temp,
+                condition: mockData.weather[0].main,
+                humidity: mockData.main.humidity,
+                wind_speed: mockData.wind.speed,
+                issue: null  // No issue on successful calls
+            });
+            
+            // Schedule next update - every 1 minute (60,000 ms)
+            const nextUpdateTime = 60000;
+            addLogEntry(`Next weather update scheduled in 1 minute`, 'success');
+            setTimeout(updateWeather, nextUpdateTime);
+        }
+
+        // Function to check weather API status (poll until resolved)
+        function checkWeatherApiStatus() {
+            addLogEntry(`Checking Weather API status...`, 'warning');
+            
+            // Show status checking message
+            showStatusMessage('warning', '🔄 CHECKING API STATUS', 'Polling for resolution...');
+            
+            // Simulate API status response (success, resolved, or still down)
+            const statusResponses = ['success', 'resolved', 'down'];
+            const weight = [0.3, 0.2, 0.5]; // 30% success, 20% resolved, 50% still down
+            
+            // Weighted random selection
+            let random = Math.random();
+            let statusIndex = 2; // Default to down
+            
+            if (random < weight[0]) {
+                statusIndex = 0; // success
+            } else if (random < weight[0] + weight[1]) {
+                statusIndex = 1; // resolved
+            }
+            
+            const apiStatus = statusResponses[statusIndex];
+            
+            if (apiStatus === 'down') {
+                // API still down, continue polling
+                addLogEntry(`Weather API still down. Will check again in 1 minute.`, 'error');
+                
+                // Show still down message
+                showStatusMessage('error', '❌ API STILL DOWN', 'Next check in 1 minute...');
+                
+                pushToDataLayer('weather_api_status_check', {
+                    status: 'down',
+                    issue: 'API service unavailable',
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Poll again in 1 minute
+                setTimeout(checkWeatherApiStatus, 60000);
+            } else if (apiStatus === 'success' || apiStatus === 'resolved') {
+                // API back online
+                addLogEntry(`Weather API is back online (${apiStatus}).`, 'success');
+                setStatusDot('weather-status', 'success');
+                
+                // Show recovered message
+                showStatusMessage('success', '✅ API RECOVERED', `Status: ${apiStatus}`);
+                
+                pushToDataLayer('weather_api_status_check', {
+                    status: apiStatus,
+                    issue: null,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Post failure message to the same API
+                postFailureMessageToStatusApi();
+                
+                // Resume regular updates in 1 minute after posting the message
+                // This is handled in the postFailureMessageToStatusApi function
+            }
+        }
+
+        // Function to post failure message to status API
+        function postFailureMessageToStatusApi() {
+            addLogEntry(`Posting failure message to Weather Status API...`, 'warning');
+            
+            // Show posting message
+            showStatusMessage('info', '📤 POSTING FAILURE MESSAGE', 'To Status API');
+            
+            // Simulate API post response
+            setTimeout(() => {
+                addLogEntry(`Failure message successfully posted to Weather Status API.`, 'success');
+                
+                // Show message posted notification
+                showStatusMessage('success', '✅ FAILURE MESSAGE POSTED', 'Regular updates will resume...');
+                
+                pushToDataLayer('weather_api_failure_posted', {
+                    status: 'posted',
+                    issue: 'Failure details posted to status API',
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Resume regular updates in 1 minute
+                setTimeout(updateWeather, 60000);
+            }, 1000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setStatusDot('weather-status', 'warning');
+            
+            addLogEntry('System initialized - Weather API calls occur every 1 minute.', 'success');
+            pushToDataLayer('system_init', { 
+                status: 'ready',
+                issue: null  // No issue during initialization
+            });
+            
+            // Start the weather updates
+            setTimeout(updateWeather, 1000);
+        });
+    </script>
+</body>
+</html>
