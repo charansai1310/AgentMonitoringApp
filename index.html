@@ -4,11 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather App</title>
+    
+    <!-- Data Layer -->
+    <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-5J4X4HDS');</script>    
+})(window,document,'script','dataLayer','GTM-5J4X4HDS');</script>
+<!-- End Google Tag Manager -->
+    
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -135,8 +140,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     </style>
     </head>
 <body>
+    <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5J4X4HDS"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
     <div class="container">
         <div class="card" id="weather-card">
             <h2>
@@ -268,6 +275,39 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             const now = new Date();
             addLogEntry(`Attempting Weather API call to OpenWeatherMap at ${formatTimestamp(now)}`, 'success');
             
+            // Randomly simulate a failure (20% chance) even if the API is working
+            const shouldSimulateFailure = Math.random() < 0.2;
+            
+            if (shouldSimulateFailure) {
+                // Simulate a random failure without even calling the API
+                const randomIssue = possibleIssues[Math.floor(Math.random() * possibleIssues.length)];
+                
+                // Log the simulated failure
+                console.log('Simulating API failure:', randomIssue);
+                setStatusDot('weather-status', 'error');
+                addLogEntry(`Weather API request failed (SIMULATED): ${randomIssue}`, 'error');
+                
+                // Show error message
+                showStatusMessage('error', '❌ API CALL FAILED (SIMULATED)', randomIssue);
+                
+                // Push to data layer
+                pushToDataLayer('weather_api_error', {
+                    error: 'Simulated Network error',
+                    issue: randomIssue,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // When API is down, don't recall after 1 min
+                // Instead, start polling status API every 1 min until resolved
+                addLogEntry(`Weather API is down. Starting status check in 2 minutes...`, 'error');
+                setStatusDot('weather-status', 'error');
+                
+                // Wait 2 minutes before starting to poll status API
+                setTimeout(checkWeatherApiStatus, 120000);
+                return;
+            }
+            
+            // Only proceed with the actual API call if we're not simulating a failure
             // OpenWeatherMap API configuration
             const apiKey = '1459084b4a1da0a19fdd47351409add1'; // Replace with your actual API key
             const city = 'London'; // Default city, can be changed or made dynamic
@@ -318,10 +358,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     setTimeout(updateWeather, nextUpdateTime);
                 })
                 .catch(error => {
-                    // API call failed
+                    // Real API call failed
                     console.error('Weather API Error:', error);
                     
-                    // Select a random issue based on the error
+                    // Select a relevant issue based on the error
                     let issue = "API connection error";
                     if (error.message.includes('404')) {
                         issue = "City not found";
@@ -334,7 +374,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     }
                     
                     setStatusDot('weather-status', 'error');
-                    addLogEntry(`Weather API request failed: ${issue}`, 'error');
+                    addLogEntry(`Weather API request failed (REAL): ${issue}`, 'error');
                     
                     // Show error message
                     showStatusMessage('error', '❌ API CALL FAILED', issue);
@@ -363,38 +403,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             // Show status checking message
             showStatusMessage('warning', '🔄 CHECKING API STATUS', 'Polling for resolution...');
             
-            // OpenWeatherMap API status endpoint (this would be replaced with a real status endpoint)
-            // For demo purposes - use a simpler endpoint that's less likely to fail
-            const apiKey = '1459084b4a1da0a19fdd47351409add1'; // Replace with your actual API key
-            const statusUrl = `https://api.openweathermap.org/data/2.5/weather?q=London&appid=${apiKey}`;
+            // Simulate random results for status check (success, resolved, or still down)
+            const statusResponses = ['success', 'resolved', 'down'];
+            const weight = [0.3, 0.2, 0.5]; // 30% success, 20% resolved, 50% still down
             
-            fetch(statusUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // API is back online
-                    addLogEntry(`Weather API is back online (Success).`, 'success');
-                    setStatusDot('weather-status', 'success');
-                    
-                    // Show recovered message
-                    showStatusMessage('success', '✅ API RECOVERED', `Status: Success`);
-                    
-                    pushToDataLayer('weather_api_status_check', {
-                        status: 'success',
-                        issue: null,
-                        timestamp: new Date().toISOString()
-                    });
-                    
-                    // Post failure message to the same API
-                    postFailureMessageToStatusApi();
-                })
-                .catch(error => {
+            // Weighted random selection for simulated result
+            let random = Math.random();
+            let statusIndex = 2; // Default to down
+            
+            if (random < weight[0]) {
+                statusIndex = 0; // success
+            } else if (random < weight[0] + weight[1]) {
+                statusIndex = 1; // resolved
+            }
+            
+            const apiStatus = statusResponses[statusIndex];
+            
+            // Simulate a delay for the API check (500ms to 1.5s)
+            setTimeout(() => {
+                if (apiStatus === 'down') {
                     // API still down, continue polling
-                    console.error('Status API Error:', error);
+                    console.log('Simulating API still down');
                     addLogEntry(`Weather API still down. Will check again in 1 minute.`, 'error');
                     
                     // Show still down message
@@ -408,7 +437,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     
                     // Poll again in 1 minute
                     setTimeout(checkWeatherApiStatus, 60000);
-                });
+                } else {
+                    // API back online
+                    console.log('Simulating API recovery with status:', apiStatus);
+                    addLogEntry(`Weather API is back online (${apiStatus}).`, 'success');
+                    setStatusDot('weather-status', 'success');
+                    
+                    // Show recovered message
+                    showStatusMessage('success', '✅ API RECOVERED', `Status: ${apiStatus}`);
+                    
+                    pushToDataLayer('weather_api_status_check', {
+                        status: apiStatus,
+                        issue: null,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    // Post failure message to the same API
+                    postFailureMessageToStatusApi();
+                }
+            }, getRandomInt(500, 1500));
         }
 
         // Function to post failure message to status API
@@ -418,37 +465,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             // Show posting message
             showStatusMessage('info', '📤 POSTING FAILURE MESSAGE', 'To Status API');
             
-            // This would be a real POST request to report the failure
-            // For demo purposes, we'll use the same endpoint but with a POST method
-            const apiKey = '1459084b4a1da0a19fdd47351409add1'; // Replace with your actual API key
-            const reportUrl = 'https://api.openweathermap.org/data/2.5/stations'; // This is a placeholder - in reality you'd use a specific endpoint
+            // Simulate either success or failure for the post operation (80% success rate)
+            const postSuccessful = Math.random() < 0.8;
             
-            // Prepare the failure report data
-            const reportData = {
-                appid: apiKey,
-                external_id: 'weather_app_failure_report',
-                name: 'Weather App Failure Report',
-                latitude: 0,
-                longitude: 0,
-                altitude: 0
-            };
-            
-            // Make the POST request
-            fetch(reportUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(reportData)
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
+            // Simulate a delay for the API post (800ms to 2s)
+            setTimeout(() => {
+                if (postSuccessful) {
                     // Successfully reported the failure
+                    console.log('Simulating successful failure message post');
                     addLogEntry(`Failure message successfully posted to Weather Status API.`, 'success');
                     
                     // Show message posted notification
@@ -459,34 +483,32 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         issue: 'Failure details posted to status API',
                         timestamp: new Date().toISOString()
                     });
-                    
-                    // Resume regular updates in 1 minute
-                    setTimeout(updateWeather, 60000);
-                })
-                .catch(error => {
+                } else {
                     // Failed to post the report
-                    console.error('Failed to post report:', error);
-                    addLogEntry(`Failed to post failure message: ${error.message}. Will retry weather updates anyway.`, 'error');
+                    const errorMessage = "Connection refused";
+                    console.log('Simulating failed post with error:', errorMessage);
+                    addLogEntry(`Failed to post failure message: ${errorMessage}. Will retry weather updates anyway.`, 'error');
                     
                     // Show error message
                     showStatusMessage('error', '❌ FAILED TO POST MESSAGE', 'Resuming updates anyway...');
                     
                     pushToDataLayer('weather_api_failure_posted', {
                         status: 'failed',
-                        issue: 'Could not post failure details',
+                        issue: 'Could not post failure details: ' + errorMessage,
                         timestamp: new Date().toISOString()
                     });
-                    
-                    // Still resume regular updates
-                    setTimeout(updateWeather, 60000);
-                });
+                }
+                
+                // Resume regular updates in 1 minute regardless of post result
+                setTimeout(updateWeather, 60000);
+            }, getRandomInt(800, 2000));
         }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             setStatusDot('weather-status', 'warning');
             
-            addLogEntry('System initialized - Weather API calls occur every 1 minute. When down, status API is polled every 1 minute and then posted to after recovery.', 'success');
+            addLogEntry('System initialized - Weather App with random failure simulation. API calls occur every 1 minute with 20% chance of simulated failure.', 'success');
             pushToDataLayer('system_init', { 
                 status: 'ready',
                 issue: null  // No issue during initialization
