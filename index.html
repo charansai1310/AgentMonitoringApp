@@ -276,7 +276,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             addLogEntry(`Attempting Weather API call to OpenWeatherMap at ${formatTimestamp(now)}`, 'success');
             
             // Randomly simulate a failure (20% chance) even if the API is working
-            const shouldSimulateFailure = Math.random() < 0.5;
+            const shouldSimulateFailure = Math.random() < 0.35;
             
             if (shouldSimulateFailure) {
                 // Simulate a random failure without even calling the API
