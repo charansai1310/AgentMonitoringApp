@@ -273,9 +273,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
         function updateWeather() {
             const now = new Date();
-            addLogEntry(`Attempting Weather API call to OpenWeatherMap at ${formatTimestamp(now)}`, 'success');
+            addLogEntry(`Attempting Weather API call at ${formatTimestamp(now)}`, 'success');
             
-            // Randomly simulate a failure (20% chance) even if the API is working
+            // Randomly simulate a failure (35% chance) even if the API is working
             const shouldSimulateFailure = Math.random() < 0.35;
             
             if (shouldSimulateFailure) {
@@ -285,7 +285,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 // Log the simulated failure
                 console.log('Simulating API failure:', randomIssue);
                 setStatusDot('weather-status', 'error');
-                addLogEntry(`Weather API request failed (SIMULATED): ${randomIssue}`, 'error');
+                addLogEntry(`Weather API request failed: ${randomIssue}`, 'error');
                 
                 // Show error message
                 showStatusMessage('error', '❌ API CALL FAILED (SIMULATED)', randomIssue);
@@ -352,9 +352,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         issue: null  // No issue on successful calls
                     });
                     
-                    // Schedule next update - every 1 minute (60,000 ms)
-                    const nextUpdateTime = 60000;
-                    addLogEntry(`Next weather update scheduled in 1 minute`, 'success');
+                    // Schedule next update - every 30 seconds (30,000 ms)
+                    const nextUpdateTime = 30000;
+                    addLogEntry(`Next weather update scheduled in 30 seconds`, 'success');
                     setTimeout(updateWeather, nextUpdateTime);
                 })
                 .catch(error => {
@@ -374,7 +374,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     }
                     
                     setStatusDot('weather-status', 'error');
-                    addLogEntry(`Weather API request failed (REAL): ${issue}`, 'error');
+                    addLogEntry(`Weather API request failed: ${issue}`, 'error');
                     
                     // Show error message
                     showStatusMessage('error', '❌ API CALL FAILED', issue);
@@ -424,10 +424,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 if (apiStatus === 'down') {
                     // API still down, continue polling
                     console.log('Simulating API still down');
-                    addLogEntry(`Weather API still down. Will check again in 1 minute.`, 'error');
+                    addLogEntry(`Weather API still down. Will check again in 30 seconds.`, 'error');
                     
                     // Show still down message
-                    showStatusMessage('error', '❌ API STILL DOWN', 'Next check in 1 minute...');
+                    showStatusMessage('error', '❌ API STILL DOWN', 'Next check in 30 seconds...');
                     
                     pushToDataLayer('weather_api_status_check', {
                         status: 'down',
@@ -436,7 +436,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     });
                     
                     // Poll again in 1 minute
-                    setTimeout(checkWeatherApiStatus, 60000);
+                    setTimeout(checkWeatherApiStatus, 30000);
                 } else {
                     // API back online
                     console.log('Simulating API recovery with status:', apiStatus);
@@ -499,8 +499,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     });
                 }
                 
-                // Resume regular updates in 1 minute regardless of post result
-                setTimeout(updateWeather, 60000);
+                // Resume regular updates in 30 seconds regardless of post result
+                setTimeout(updateWeather, 30000);
             }, getRandomInt(800, 2000));
         }
 
